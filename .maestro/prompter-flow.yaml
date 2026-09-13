@@ -1,0 +1,23 @@
+appId: com.altixcode.syncprompt
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd:
+    timeout: 8000
+- tapOn: ".*Use sample script.*"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: sp-filled
+# scrollUntilVisible reports COMPLETED while only a sliver of the button is on
+# screen, and the tap then resolves to its centre below the visible area. Swipe
+# explicitly so the whole control is reachable.
+- swipe:
+    start: "50%,72%"
+    end: "50%,28%"
+    duration: 600
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn: ".*Start prompter.*"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: sp-prompter

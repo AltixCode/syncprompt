@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "SyncPrompt",
+    "slug": "syncprompt",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "syncprompt",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1120"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.altixcode.syncprompt",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SyncPrompt uses the camera to record you while the teleprompter scrolls.",
+        "NSMicrophoneUsageDescription": "SyncPrompt listens to your voice so the teleprompter follows what you are saying.",
+        "NSSpeechRecognitionUsageDescription": "SyncPrompt matches your speech to the script on device so the prompter keeps pace with you.",
+        "NSPhotoLibraryAddUsageDescription": "SyncPrompt saves the videos you record to your photo library."
+      }
+    },
+    "android": {
+      "package": "com.altixcode.syncprompt",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0B1120",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      ["expo-camera", { "cameraPermission": "SyncPrompt uses the camera to record you while the teleprompter scrolls.", "microphonePermission": "SyncPrompt listens to your voice so the teleprompter follows what you are saying." }],
+      ["expo-speech-recognition", { "microphonePermission": "SyncPrompt listens to your voice so the teleprompter follows what you are saying.", "speechRecognitionPermission": "SyncPrompt matches your speech to the script on device so the prompter keeps pace with you." }],
+      "./plugins/withIOSSceneLifecycle",
+      "./plugins/withAndroidRtl"
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}
