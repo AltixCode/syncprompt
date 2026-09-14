@@ -1,5 +1,11 @@
 appId: com.altixcode.syncprompt
+name: Load a script and open the prompter (Android)
 ---
+# Same contract as the iOS flow. The voice tracking itself is not exercised
+# here or there: it needs a camera and a microphone hearing real speech, which
+# neither a simulator nor an emulator provides. What is gated is everything up
+# to it -- that the script loads, the permissions path is taken, and the
+# prompter renders the script rather than an empty screen.
 - launchApp:
     clearState: true
 - waitForAnimationToEnd:
@@ -7,7 +13,7 @@ appId: com.altixcode.syncprompt
 - tapOn: ".*Use sample script.*"
 - waitForAnimationToEnd:
     timeout: 3000
-- takeScreenshot: sp-filled
+- takeScreenshot: android-sp-filled
 # scrollUntilVisible reports COMPLETED while only a sliver of the button is on
 # screen, and the tap then resolves to its centre below the visible area. Swipe
 # explicitly so the whole control is reachable.
@@ -18,6 +24,18 @@ appId: com.altixcode.syncprompt
 - waitForAnimationToEnd:
     timeout: 2000
 - tapOn: ".*Start prompter.*"
+- runFlow:
+    when:
+      visible: ".*(Allow|ALLOW|While using).*"
+    commands:
+      - tapOn: ".*(Allow|ALLOW|While using).*"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - runFlow:
+          when:
+            visible: ".*(Allow|ALLOW|While using).*"
+          commands:
+            - tapOn: ".*(Allow|ALLOW|While using).*"
 - waitForAnimationToEnd:
     timeout: 8000
 # Asserted on the script's own words, not just on the screen appearing. The
@@ -28,4 +46,4 @@ appId: com.altixcode.syncprompt
 - extendedWaitUntil:
     visible: ".*matches what you actually say.*"
     timeout: 20000
-- takeScreenshot: sp-prompter
+- takeScreenshot: android-sp-prompter
