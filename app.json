@@ -21,7 +21,22 @@
         "NSCameraUsageDescription": "SyncPrompt uses the camera to record you while the teleprompter scrolls.",
         "NSMicrophoneUsageDescription": "SyncPrompt listens to your voice so the teleprompter follows what you are saying.",
         "NSSpeechRecognitionUsageDescription": "SyncPrompt matches your speech to the script on device so the prompter keeps pace with you.",
-        "NSPhotoLibraryAddUsageDescription": "SyncPrompt saves the videos you record to your photo library."
+        "NSPhotoLibraryAddUsageDescription": "SyncPrompt saves the videos you record to your photo library.",
+        "CFBundleLocalizations": [
+          "en",
+          "es",
+          "fr",
+          "de",
+          "ru",
+          "zh",
+          "ja",
+          "pt",
+          "ko",
+          "it",
+          "tr",
+          "el"
+        ],
+        "CFBundleDevelopmentRegion": "en"
       }
     },
     "android": {
@@ -37,11 +52,44 @@
     "plugins": [
       "expo-router",
       "expo-localization",
-      ["expo-camera", { "cameraPermission": "SyncPrompt uses the camera to record you while the teleprompter scrolls.", "microphonePermission": "SyncPrompt listens to your voice so the teleprompter follows what you are saying." }],
-      ["expo-speech-recognition", { "microphonePermission": "SyncPrompt listens to your voice so the teleprompter follows what you are saying.", "speechRecognitionPermission": "SyncPrompt matches your speech to the script on device so the prompter keeps pace with you." }],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SyncPrompt uses the camera to record you while the teleprompter scrolls.",
+          "microphonePermission": "SyncPrompt listens to your voice so the teleprompter follows what you are saying."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "SyncPrompt listens to your voice so the teleprompter follows what you are saying.",
+          "speechRecognitionPermission": "SyncPrompt matches your speech to the script on device so the prompter keeps pace with you."
+        }
+      ],
       "./plugins/withIOSSceneLifecycle",
-      "./plugins/withAndroidRtl"
+      "./plugins/withAndroidRtl",
+      [
+        "./plugins/withAndroidLocales",
+        {
+          "locales": [
+            "en",
+            "es",
+            "fr",
+            "de",
+            "ru",
+            "zh",
+            "ja",
+            "pt",
+            "ko",
+            "it",
+            "tr",
+            "el"
+          ]
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
