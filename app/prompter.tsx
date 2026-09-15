@@ -14,6 +14,9 @@ import { advanceCursor, tokenize } from '../src/engine/scriptTracker';
 import { useTheme } from '../src/theme/useTheme';
 import { t } from '../src/i18n';
 import { PaywallModal } from '../src/components/PaywallModal';
+import { useAdsStore } from '../src/store/adsStore';
+import { showInterstitial } from '../src/services/ads';
+import { shouldShowInterstitial } from '../src/services/adPolicy';
 
 const LINE_HEIGHT_RATIO = 1.5;
 
@@ -93,6 +96,22 @@ export default function PrompterScreen() {
     return true;
   };
 
+  const maybeShowInterstitial = async () => {
+    const { completions, lastInterstitialAt, markInterstitialShown } = useAdsStore.getState();
+    const decision = shouldShowInterstitial({
+      completions,
+      lastInterstitialAt,
+      now: Date.now(),
+      // Read at call time rather than captured: the user may have bought the upgrade from the
+      // paywall between opening this screen and finishing the work.
+      isPro: useScriptStore.getState().isPro,
+    });
+    if (!decision) return;
+    // Only a shown-and-dismissed ad resets the clock. Counting an unfilled request would
+    // suppress the next several ads for nothing.
+    if (await showInterstitial()) await markInterstitialShown();
+  };
+
   const start = async () => {
     if (!(await ensurePermissions())) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -120,7 +139,12 @@ export default function PrompterScreen() {
         const { status } = await MediaLibrary.requestPermissionsAsync(true);
         if (status === 'granted') {
           await MediaLibrary.saveToLibraryAsync(video.uri);
-          Alert.alert(t('savedTitle'), t('savedDesc'));
+          await useAdsStore.getState().recordCompletion();
+          // The ad waits behind the confirmation, and only after the take is safely in the
+          // library -- never between finishing a recording and saving it.
+          Alert.alert(t('savedTitle'), t('savedDesc'), [
+            { text: t('ok'), onPress: () => void maybeShowInterstitial() },
+          ]);
         } else {
           Alert.alert(t('saveFailed'), t('saveFailedDesc'));
         }
