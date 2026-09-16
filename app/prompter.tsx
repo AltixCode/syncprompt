@@ -12,6 +12,7 @@ import { Circle, Square, RotateCcw } from 'lucide-react-native';
 import { useScriptStore, FREE_RECORD_SECONDS } from '../src/store/useScriptStore';
 import { advanceCursor, tokenize } from '../src/engine/scriptTracker';
 import { useTheme } from '../src/theme/useTheme';
+import { useTabletColumn } from '../src/theme/useTabletColumn';
 import { t } from '../src/i18n';
 import { PaywallModal } from '../src/components/PaywallModal';
 import { useAdsStore } from '../src/store/adsStore';
@@ -22,6 +23,7 @@ const LINE_HEIGHT_RATIO = 1.5;
 
 export default function PrompterScreen() {
   const theme = useTheme();
+  const tabletColumn = useTabletColumn();
   const { script, tokens, cursor, fontSize, mirrored, isPro, setCursor, resetCursor, recordLimitSeconds } =
     useScriptStore();
 
@@ -199,7 +201,7 @@ export default function PrompterScreen() {
             <ScrollView
               ref={scrollRef}
               scrollEnabled={!recording}
-              contentContainerStyle={{ padding: 20, paddingBottom: 240 }}
+              contentContainerStyle={{ padding: 20, paddingBottom: 240 , ...tabletColumn}}
               style={mirrored ? { transform: [{ scaleX: -1 }] } : undefined}
             >
               <Text style={{ fontSize, lineHeight, color: '#FFFFFF' }}>

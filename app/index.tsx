@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { Sparkles, Mic, ShieldCheck, ClipboardPaste, Type } from 'lucide-react-native';
 import { useScriptStore } from '../src/store/useScriptStore';
 import { useTheme } from '../src/theme/useTheme';
+import { useTabletColumn } from '../src/theme/useTabletColumn';
 import { t } from '../src/i18n';
 import { ForwardArrow } from '../src/components/DirectionalIcons';
 import { AdBanner } from '../src/components/AdBanner';
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   // states. It is absent everywhere else rather than shown as a dead control.
   const offerPrivacyOptions = useAdsStore((state) => state.consent.offerPrivacyOptions);
   const theme = useTheme();
+  const tabletColumn = useTabletColumn();
   const router = useRouter();
   const { script, tokens, fontSize, mirrored, setScript, setFontSize, toggleMirrored } = useScriptStore();
   const [focused, setFocused] = useState(false);
@@ -41,7 +43,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={['bottom']} className="flex-1 px-5" style={{ backgroundColor: theme.background }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 , ...tabletColumn}}>
         <View className="mt-4 mb-5">
           <View className="inline-flex self-start border px-3 py-1 rounded-full mb-3 flex-row items-center"
             style={{ backgroundColor: theme.primaryLight, borderColor: theme.primaryBorder }}>
