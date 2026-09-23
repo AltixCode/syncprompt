@@ -202,7 +202,11 @@ export default function PrompterScreen() {
               ref={scrollRef}
               scrollEnabled={!recording}
               contentContainerStyle={{ padding: 20, paddingBottom: 240 , ...tabletColumn}}
-              style={mirrored ? { transform: [{ scaleX: -1 }] } : undefined}
+              // flex: 1 is load-bearing: without it this ScrollView has no bounded
+              // height (Yoga sizes it to its own content, "auto"), so the parent's
+              // overflow-hidden card (mx-4 mt-2 rounded-2xl overflow-hidden) clips
+              // it to nothing and the script never appears on screen at all.
+              style={mirrored ? { flex: 1, transform: [{ scaleX: -1 }] } : { flex: 1 }}
             >
               <Text style={{ fontSize, lineHeight, color: '#FFFFFF' }}>
                 {words.map((word, i) => (
