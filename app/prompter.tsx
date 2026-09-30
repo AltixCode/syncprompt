@@ -1,31 +1,57 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
-import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
+import {
+  CameraView,
+  useCameraPermissions,
+  useMicrophonePermissions,
+} from "expo-camera";
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
-} from 'expo-speech-recognition';
-import * as MediaLibrary from 'expo-media-library/legacy';
-import { Circle, Square, RotateCcw } from 'lucide-react-native';
-import { useScriptStore, FREE_RECORD_SECONDS } from '../src/store/useScriptStore';
-import { advanceCursor, tokenize } from '../src/engine/scriptTracker';
-import { useTheme } from '../src/theme/useTheme';
-import { useTabletColumn } from '../src/theme/useTabletColumn';
-import { t } from '../src/i18n';
-import { PaywallModal } from '../src/components/PaywallModal';
-import { useAdsStore } from '../src/store/adsStore';
-import { showInterstitial } from '../src/services/ads';
-import { shouldShowInterstitial } from '../src/services/adPolicy';
+} from "expo-speech-recognition";
+import * as MediaLibrary from "expo-media-library/legacy";
+import { Circle, Square, RotateCcw } from "lucide-react-native";
+import {
+  useScriptStore,
+  FREE_RECORD_SECONDS,
+} from "../src/store/useScriptStore";
+import { advanceCursor, tokenize } from "../src/engine/scriptTracker";
+import { ratioToVideoQuality } from "../src/engine/videoSettings";
+import { useTheme } from "../src/theme/useTheme";
+import { useTabletColumn } from "../src/theme/useTabletColumn";
+import { t } from "../src/i18n";
+import { PaywallModal } from "../src/components/PaywallModal";
+import { useAdsStore } from "../src/store/adsStore";
+import { showInterstitial } from "../src/services/ads";
+import { shouldShowInterstitial } from "../src/services/adPolicy";
 
 const LINE_HEIGHT_RATIO = 1.5;
 
 export default function PrompterScreen() {
   const theme = useTheme();
   const tabletColumn = useTabletColumn();
-  const { script, tokens, cursor, fontSize, mirrored, isPro, setCursor, resetCursor, recordLimitSeconds } =
-    useScriptStore();
+  const {
+    script,
+    tokens,
+    cursor,
+    fontSize,
+    mirrored,
+    isPro,
+    videoRatio,
+    setCursor,
+    resetCursor,
+    recordLimitSeconds,
+  } = useScriptStore();
 
   const [camPermission, requestCam] = useCameraPermissions();
   const [micPermission, requestMic] = useMicrophonePermissions();
@@ -40,13 +66,15 @@ export default function PrompterScreen() {
   const lineHeight = fontSize * LINE_HEIGHT_RATIO;
   const granted = camPermission?.granted && micPermission?.granted;
 
-  useEffect(() => { cursorRef.current = cursor; }, [cursor]);
+  useEffect(() => {
+    cursorRef.current = cursor;
+  }, [cursor]);
 
   // Speech results arrive continuously while recording. Each one carries the
   // whole transcript so far, so the tracker is given the transcript and decides
   // how far the cursor may move -- it never trusts the recogniser's own idea of
   // position, which revises itself as more audio arrives.
-  useSpeechRecognitionEvent('result', (event) => {
+  useSpeechRecognitionEvent("result", (event) => {
     const spoken = event.results?.[0]?.transcript;
     if (!spoken) return;
     const next = advanceCursor(tokens, tokenize(spoken), cursorRef.current);
@@ -56,7 +84,7 @@ export default function PrompterScreen() {
     }
   });
 
-  useSpeechRecognitionEvent('error', () => {
+  useSpeechRecognitionEvent("error", () => {
     // Losing recognition mid-take must not end the recording: the camera keeps
     // rolling and the prompter simply stops following.
     setSpeechReady(false);
@@ -66,7 +94,10 @@ export default function PrompterScreen() {
     // Scroll so the current line sits at the reading position rather than the
     // top, which is where a presenter's eyes actually rest.
     const line = Math.floor(cursor / 8);
-    scrollRef.current?.scrollTo({ y: Math.max(0, line * lineHeight - lineHeight * 2), animated: true });
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, line * lineHeight - lineHeight * 2),
+      animated: true,
+    });
   }, [cursor, lineHeight]);
 
   useEffect(() => {
@@ -92,14 +123,15 @@ export default function PrompterScreen() {
     const speech = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     setSpeechReady(speech.granted);
     if (!cam.granted || !mic.granted) {
-      Alert.alert(t('permissionsDenied'), t('permissionsDeniedDesc'));
+      Alert.alert(t("permissionsDenied"), t("permissionsDeniedDesc"));
       return false;
     }
     return true;
   };
 
   const maybeShowInterstitial = async () => {
-    const { completions, lastInterstitialAt, markInterstitialShown } = useAdsStore.getState();
+    const { completions, lastInterstitialAt, markInterstitialShown } =
+      useAdsStore.getState();
     const decision = shouldShowInterstitial({
       completions,
       lastInterstitialAt,
@@ -124,7 +156,7 @@ export default function PrompterScreen() {
 
     try {
       ExpoSpeechRecognitionModule.start({
-        lang: 'en-US',
+        lang: "en-US",
         interimResults: true,
         continuous: true,
         // On-device only: the pitch is that neither the script nor the voice
@@ -139,43 +171,64 @@ export default function PrompterScreen() {
       const video = await cameraRef.current?.recordAsync();
       if (video?.uri) {
         const { status } = await MediaLibrary.requestPermissionsAsync(true);
-        if (status === 'granted') {
+        if (status === "granted") {
           await MediaLibrary.saveToLibraryAsync(video.uri);
           await useAdsStore.getState().recordCompletion();
           // The ad waits behind the confirmation, and only after the take is safely in the
           // library -- never between finishing a recording and saving it.
-          Alert.alert(t('savedTitle'), t('savedDesc'), [
-            { text: t('ok'), onPress: () => void maybeShowInterstitial() },
+          Alert.alert(t("savedTitle"), t("savedDesc"), [
+            { text: t("ok"), onPress: () => void maybeShowInterstitial() },
           ]);
         } else {
-          Alert.alert(t('saveFailed'), t('saveFailedDesc'));
+          Alert.alert(t("saveFailed"), t("saveFailedDesc"));
         }
       }
     } catch {
-      Alert.alert(t('saveFailed'), t('saveFailedDesc'));
+      Alert.alert(t("saveFailed"), t("saveFailedDesc"));
     }
   };
 
   const stop = async (hitLimit = false) => {
     setRecording(false);
-    try { ExpoSpeechRecognitionModule.stop(); } catch { /* already stopped */ }
+    try {
+      ExpoSpeechRecognitionModule.stop();
+    } catch {
+      /* already stopped */
+    }
     cameraRef.current?.stopRecording();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (hitLimit && !isPro) {
       Alert.alert(
-        t('freeLimitReached'),
-        t('freeLimitReachedDesc', { seconds: FREE_RECORD_SECONDS }),
-        [{ text: t('cancel'), style: 'cancel' }, { text: t('lifetimeAccessPlain'), onPress: () => setPaywallVisible(true) }],
+        t("freeLimitReached"),
+        t("freeLimitReachedDesc", { seconds: FREE_RECORD_SECONDS }),
+        [
+          { text: t("cancel"), style: "cancel" },
+          {
+            text: t("lifetimeAccessPlain"),
+            onPress: () => setPaywallVisible(true),
+          },
+        ],
       );
     }
   };
 
   if (!granted) {
     return (
-      <SafeAreaView className="flex-1 px-6 items-center justify-center" style={{ backgroundColor: theme.background }}>
-        <Text className="text-xl font-bold text-center mb-2" style={{ color: theme.text }}>{t('permissionsTitle')}</Text>
-        <Text className="text-sm text-center mb-6 leading-relaxed" style={{ color: theme.textSecondary }}>
-          {t('permissionsDesc')}
+      <SafeAreaView
+        className="flex-1 px-6 items-center justify-center"
+        style={{ backgroundColor: theme.background }}
+      >
+        <Text
+          className="text-xl font-bold text-center mb-2"
+          style={{ color: theme.text }}
+        >
+          {t("permissionsTitle")}
+        </Text>
+        <Text
+          className="text-sm text-center mb-6 leading-relaxed"
+          style={{ color: theme.textSecondary }}
+        >
+          {t("permissionsDesc")}
         </Text>
         <TouchableOpacity
           onPress={ensurePermissions}
@@ -183,7 +236,12 @@ export default function PrompterScreen() {
           className="px-6 py-3.5 rounded-2xl"
           style={{ backgroundColor: theme.primary }}
         >
-          <Text className="font-bold text-base" style={{ color: theme.onPrimary }}>{t('grantPermissions')}</Text>
+          <Text
+            className="font-bold text-base"
+            style={{ color: theme.onPrimary }}
+          >
+            {t("grantPermissions")}
+          </Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -192,79 +250,127 @@ export default function PrompterScreen() {
   const words = script.split(/\s+/).filter(Boolean);
 
   return (
-    <View className="flex-1" style={{ backgroundColor: '#000' }}>
-      <CameraView ref={cameraRef} style={{ flex: 1 }} facing="front" mode="video" videoQuality="1080p">
-        {/* The script sits directly under the lens so the presenter's eye-line
-            stays close to camera rather than drifting down the screen. */}
-        <SafeAreaView edges={['top', 'bottom']} className="flex-1">
-          <View className="flex-1 mx-4 mt-2 rounded-2xl overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
-            <ScrollView
-              ref={scrollRef}
-              scrollEnabled={!recording}
-              contentContainerStyle={{ padding: 20, paddingBottom: 240 , ...tabletColumn}}
-              // flex: 1 is load-bearing: without it this ScrollView has no bounded
-              // height (Yoga sizes it to its own content, "auto"), so the parent's
-              // overflow-hidden card (mx-4 mt-2 rounded-2xl overflow-hidden) clips
-              // it to nothing and the script never appears on screen at all.
-              style={mirrored ? { flex: 1, transform: [{ scaleX: -1 }] } : { flex: 1 }}
-            >
-              <Text style={{ fontSize, lineHeight, color: '#FFFFFF' }}>
-                {words.map((word, i) => (
-                  <Text
-                    key={i}
-                    style={{
-                      // Words already spoken dim, so the eye lands on the next
-                      // one without hunting for a highlight.
-                      color: i < cursor ? 'rgba(255,255,255,0.35)' : '#FFFFFF',
-                      fontWeight: i === cursor ? '800' : '400',
-                    }}
-                  >
-                    {word}{' '}
-                  </Text>
-                ))}
-              </Text>
-            </ScrollView>
-          </View>
-
-          {speechReady === false ? (
-            <Text className="text-center text-xs mb-1" style={{ color: '#FCD34D' }}>
-              {t('recognitionUnavailable')}
-            </Text>
-          ) : null}
-
-          <View className="flex-row items-center justify-center py-4">
-            <TouchableOpacity
-              onPress={() => { resetCursor(); cursorRef.current = 0; }}
-              accessibilityRole="button"
-              accessibilityLabel={t('restartScript')}
-              className="p-3 rounded-full mr-8"
-              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-            >
-              <RotateCcw size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => (recording ? stop() : start())}
-              accessibilityRole="button"
-              accessibilityLabel={recording ? t('stopRecording') : t('tapToRecord')}
-              className="items-center justify-center rounded-full"
-              style={{ width: 76, height: 76, backgroundColor: recording ? '#FFFFFF' : '#EF4444' }}
-            >
-              {recording ? <Square size={26} color="#EF4444" /> : <Circle size={30} color="#FFFFFF" fill="#FFFFFF" />}
-            </TouchableOpacity>
-
-            <View className="ml-8 items-center" style={{ width: 46 }}>
-              {recording ? (
-                <Text className="text-xs font-mono font-bold" style={{ color: '#FFFFFF' }}>
-                  {String(Math.floor(elapsed / 60)).padStart(2, '0')}:{String(elapsed % 60).padStart(2, '0')}
+    <View className="flex-1" style={{ backgroundColor: "#000" }}>
+      {/* CameraView does not support rendering React children -- expo-camera
+          only logs a console.warn ("This may lead to inconsistent behaviour
+          or crashes") and otherwise fails silently, so nesting the script and
+          controls inside it (as this screen used to) meant the whole overlay
+          -- prompt text AND the record button -- could drop out unpredictably
+          with no error a tester would ever see. The camera and the overlay
+          are now separate, absolutely-positioned siblings, exactly as
+          expo-camera's own warning recommends. */}
+      <CameraView
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+        facing="front"
+        mode="video"
+        videoQuality={ratioToVideoQuality(videoRatio)}
+      />
+      {/* The script sits directly under the lens so the presenter's eye-line
+          stays close to camera rather than drifting down the screen. */}
+      <SafeAreaView
+        edges={["top", "bottom"]}
+        style={StyleSheet.absoluteFill}
+      >
+        <View
+          className="flex-1 mx-4 mt-2 rounded-2xl overflow-hidden"
+          style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
+        >
+          <ScrollView
+            ref={scrollRef}
+            scrollEnabled={!recording}
+            contentContainerStyle={{
+              padding: 20,
+              paddingBottom: 240,
+              ...tabletColumn,
+            }}
+            // flex: 1 is load-bearing: without it this ScrollView has no bounded
+            // height (Yoga sizes it to its own content, "auto"), so the parent's
+            // overflow-hidden card (mx-4 mt-2 rounded-2xl overflow-hidden) clips
+            // it to nothing and the script never appears on screen at all.
+            style={
+              mirrored ? { flex: 1, transform: [{ scaleX: -1 }] } : { flex: 1 }
+            }
+          >
+            <Text style={{ fontSize, lineHeight, color: "#FFFFFF" }}>
+              {words.map((word, i) => (
+                <Text
+                  key={i}
+                  style={{
+                    // Words already spoken dim, so the eye lands on the next
+                    // one without hunting for a highlight.
+                    color: i < cursor ? "rgba(255,255,255,0.35)" : "#FFFFFF",
+                    fontWeight: i === cursor ? "800" : "400",
+                  }}
+                >
+                  {word}{" "}
                 </Text>
-              ) : null}
-            </View>
-          </View>
-        </SafeAreaView>
-      </CameraView>
+              ))}
+            </Text>
+          </ScrollView>
+        </View>
 
-      <PaywallModal visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
+        {speechReady === false ? (
+          <Text
+            className="text-center text-xs mb-1"
+            style={{ color: "#FCD34D" }}
+          >
+            {t("recognitionUnavailable")}
+          </Text>
+        ) : null}
+
+        <View className="flex-row items-center justify-center py-4">
+          <TouchableOpacity
+            onPress={() => {
+              resetCursor();
+              cursorRef.current = 0;
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t("restartScript")}
+            className="p-3 rounded-full mr-8"
+            style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+          >
+            <RotateCcw size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => (recording ? stop() : start())}
+            accessibilityRole="button"
+            accessibilityLabel={
+              recording ? t("stopRecording") : t("tapToRecord")
+            }
+            className="items-center justify-center rounded-full"
+            style={{
+              width: 76,
+              height: 76,
+              backgroundColor: recording ? "#FFFFFF" : "#EF4444",
+            }}
+          >
+            {recording ? (
+              <Square size={26} color="#EF4444" />
+            ) : (
+              <Circle size={30} color="#FFFFFF" fill="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+
+          <View className="ml-8 items-center" style={{ width: 46 }}>
+            {recording ? (
+              <Text
+                className="text-xs font-mono font-bold"
+                style={{ color: "#FFFFFF" }}
+              >
+                {String(Math.floor(elapsed / 60)).padStart(2, "0")}:
+                {String(elapsed % 60).padStart(2, "0")}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </SafeAreaView>
+
+      <PaywallModal
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+      />
     </View>
   );
 }
